@@ -1,0 +1,32 @@
+{
+    "properties": {
+        "displayName": "Deny Windows Server 2008",
+        "policyType": "Custom",
+        "mode": "All",
+        "description": "Deny Windows Server 2008",
+        "metadata": {
+            "category": "Compute"
+        },
+        "parameters": {},
+        "policyRule": {
+            "if": {
+                "allof": [
+                    {
+                      "field": "type",
+                      "equals": "Microsoft.Compute/virtualMachines"
+                    },
+                    {
+                      "field": "Microsoft.Compute/imageSKU",
+                      "in": [
+                        "2008-R2-SP1",
+                        "2008-R2-SP1-smalldisk"
+                      ]
+                    }
+                  ]
+            },
+            "then": {
+                "effect": "deny"
+            }
+        }
+    }
+}

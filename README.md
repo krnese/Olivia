@@ -1,2 +1,2 @@
 # Olivia
-If Led Zeppelin had a repo, it would be something like this
+This repo will be beautifully decorated with plush velvet seating and colorful decor
