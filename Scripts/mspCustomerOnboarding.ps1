@@ -1,15 +1,15 @@
-﻿Connect-AzureRmAccount
+﻿
+Connect-AzureRmAccount
 
 "Logging in to Azure..."
 $Conn = Get-AutomationPSCredential -Name 'MSPAdmin'
  
 Connect-AzureRmAccount -Credential $conn
 "Selecting Azure subscription..."
-#Select-AzureRmSubscription -SubscriptionId '4b1a121f-fd0e-4a21-94ef-1d246437a7ca' 
-$AzureSubscriptionId = '09e8ed26-7d8b-4678-a179-cfca8a0cef5c'
 
-$omsworkspaceId = 'fd6d4881-9bf9-4e9b-be31-49f43e44a6de'
-$omsworkspaceKey = 'IJWSZN2Jz2yHFXeOzL6DqI9krypRfPvw4PdSdIPjMnKy5rul5hUQafW6nB/el7JO27xWj1UdO08HTU1n0HKRag=='
+# Set subscription context 
+
+Select-AzureRmSubscription -SubscriptionId <customer Subscription Id>
 
 # Checking for mgmt artifacts in customer subscription
 
@@ -19,96 +19,82 @@ if ([string]::IsNullOrEmpty($workspaces))
 {
     Write-Output "No Log Analytics workspaces found, so default workspace will be deployed...."
 
+    $omsExtensionWindowsTemplate = 'https://raw.githubusercontent.com/krnese/Olivia/master/Templates/omsExtensionWindows.json'
+    $omsExtensionLinuxTemplate = 'https://raw.githubusercontent.com/krnese/Olivia/master/Templates/omsExtensionLinux.json'
+
     $RgName = Get-Random
     $location = 'eastus'
+    $workspaceLocation = 'westeurope'
+    $automationLocation = 'westeurope'
     $deploymentName = Get-Random
-
-    Write-Output "Creating default resource group for Azure mgmt..."
-    
-    $rg = New-AzureRmResourceGroup -Name $RgName -Location $location -Tag @{ManagedByMsp="Yes"}
+    $workspaceName = Get-Random
+    $automationName = Get-Random
 
     Write-Output "Deploying Azure mgmt into default resource group...."
 
-    $deployment = New-AzureRmResourceGroupDeployment -Name $deploymentName `
-                                       -ResourceGroupName $rg.resourcegroupName `
-                                       -TemplateUri "https://raw.githubusercontent.com/krnese/managedServices/master/Templates/omsWorkspace.json" `
-                                       -omsworkspacename (get-random) `
-                                       -omsworkspaceregion 'eastus' `
-                                       -omsautomationaccountname (get-random) `
-                                       -omsautomationregion 'eastus2' `
+    $deployment = New-AzureRmDeployment -Name $deploymentName `
+                                       -Location $location `
+                                       -rgName $RgName `
+                                       -rgLocation $location `
+                                       -TemplateUri "https://raw.githubusercontent.com/krnese/Olivia/master/Templates/rgWithAzureMgmt.json" `
+                                       -workspacename $workspaceName `
+                                       -workspaceLocation $workspaceLocation `
+                                       -automationaccountname $automationName `
+                                       -automationLocation $automationLocation `
                                        -Verbose
 
-    # Using template outputs from previous deployment, into new subscription level deployment
+    # Onboarding VMs to management
     
-    $deploymentOutputs = $deployment.Outputs.Values.value.split('/')
-    $workspaceSubscriptionId = $deploymentOutputs[2]
-    $workspaceResourceGroup = $deploymentOutputs[4]
-    $workspaceName = $deploymentOutputs[8]
-    
-    # Deploying ARM template for ASC configuration
+        # Grabbing the workspace
+        Write-Output "Grabbing the workspace: `n $workspaceName"
 
-    Write-Output "Configuring Azure Security Center..."
+        $workspace = Get-AzureRmResource -ResourceGroupName $rgName -Name $workspaceName -ResourceType Microsoft.OperationalInsights/workspaces
 
-    New-AzureRmDeployment -Name (get-random) `
-                          -location $location `
-                          -TemplateUri "https://raw.githubusercontent.com/krnese/managedServices/master/Templates/deployASCwithWorkspaceSettings.json" `
-                          -securitySettings "On" `
-                          -emailContact "john@doe.com" `
-                          -securityPhoneNumber "555-343" `
-                          -workspaceSubscriptionId $workspaceSubscriptionId `
-                          -workspaceResourceGroup $workspaceResourceGroup `
-                          -workspaceName $workspaceName `
-                          -Verbose
+        Write-Output $workspace.Id
 
-    # Send traces to MSP tenant's Log Analytics workspace
-    
+        Write-Output "Done, now we'll iterate throught the VMs, do a light assessment, and install the OMS extension if missing..."
+
+        $VMs = Get-AzureRmVM
+
+        foreach ($VM in $VMs)
+        {
+            $deploymentName = (get-random)
+            Write-Output $VM.Name
+
+       # Installing OMS agent...
+
+                    if ($VM.OSProfile.WindowsConfiguration -ne $Null)
+                    {
+                        Write-Output "This is a Windows VM, so OMS extension for Windows Platform will be added"
+
+                        New-AzureRmResourceGroupDeployment -Name $deploymentName `
+                                                           -ResourceGroupName $vm.ResourceGroupName `
+                                                           -TemplateUri $omsExtensionWindowsTemplate `
+                                                           -vmName $vm.Name `
+                                                           -location $vm.Location `
+                                                           -logAnalytics $workspace.Id `
+                                                           -AsJob `
+                                                           -verbose
+
+                    }
+                    else
+                    {
+                        Write-Output "This is a Linux VM, so we'll add the OMS extension for Linux Platform"
+                        
+                        New-AzureRmResourceGroupDeployment -Name $deploymentName `
+                                                           -ResourceGroupName $vm.ResourceGroupName `
+                                                           -TemplateUri $omsExtensionLinuxTemplate `
+                                                           -vmName $vm.Name `
+                                                           -location $vm.Location `
+                                                           -logAnalytics $workspace.Id `
+                                                           -AsJob `
+                                                           -verbose                        
+
+                    }
+               }
+
     Write-Output "Customer was brought into management"
-
-    import-module C:\AzureDeploy\oms\OMSIngestionAPI\OMSIngestionAPI\OMSIngestionAPI.psm1
-
-        $onboardingTable = @()
-        $onboardingData = new-object psobject -Property @{
-            ManagedByMspTenant = 'Remotely';
-            ResourceGroupName = $RgName;
-            SubscriptionId = $AzureSubscriptionId;
-            DeploymentName = $Deployment.DeploymentName;
-            OnboardingState = $Deployment.ProvisioningState;
-            TimeStamp = $Deployment.TimeStamp.ToUniversalTime().ToString('yyyy-MM-ddtHH:mm:ss');
-            Log = 'Onboarding'
-        }
-
-    $onboardingTable += $onboardingData
-
-    $onboardingJson = ConvertTo-Json -inputobject $onboardingTable -Depth 100
-
-    Write-Output $onboardingJson 
-    
-    $LogType = 'AzureManagement'
-
-    Send-OMSAPIIngestionData -customerId $omsworkspaceId -sharedKey $omsworkspaceKey -body $onboardingJson -logType $LogType
-    }
-    else
-    {
-        # Send traces to MSP tenant's Log Analytics workspace
-
-        Write-Output "Azure mgmt services found in customer subscription, and we'll cancel the onboarding and continue the assessment"
-
-        $onboardingTable = @()
-        $onboardingData = new-object psobject -Property @{
-            ManagedByMspTenant = 'Locally';
-            SubscriptionId = $AzureSubscriptionId;
-            OnboardingState = 'Pending';
-            TimeStamp = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddtHH:mm:ss')
-            Log = 'Onboarding'
-        }
-
-    $onboardingTable += $onboardingData
-
-    $onboardingJson = ConvertTo-Json -inputobject $onboardingTable -Depth 100
-
-    Write-Output $onboardingJson 
-    
-    $LogType = 'AzureManagement'
-
-    Send-OMSAPIIngestionData -customerId $omsworkspaceId -sharedKey $omsworkspaceKey -body $onboardingJson -logType $LogType
-    }
+}
+else {
+    Write-Output "Mgmt services already present in customer subscription..."
+}

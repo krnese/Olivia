@@ -1,10 +1,10 @@
-# De-provision MSP resources in customer sub
+# De-provision Mgmt resources in customer sub
 
-#4b1a121f-fd0e-4a21-94ef-1d246437a7ca
+# Connect and set subscription context
 
-#Select-AzureRmSubscription -SubscriptionId '74903176-3e4e-492d-9d18-9afab69a0cf8' -TenantId 'b2a0bb8e-3f26-47f8-9040-209289b412a8'
+Login-AzureRmAccount
 
-#Select-AzureRmSubscription -SubscriptionId '4b1a121f-fd0e-4a21-94ef-1d246437a7ca' -TenantId 'b2a0bb8e-3f26-47f8-9040-209289b412a8'
+Select-AzureRmSubscription -SubscriptionId <subId>
 
 $VMs = Get-AzureRmVm
 
