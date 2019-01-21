@@ -2,18 +2,17 @@
 
     Write-Output "Authenticating to Azure subs using SPN..."
 
-    $sub = Get-AzureRmSubscription -TenantId b2a0bb8e-3f26-47f8-9040-209289b412a8
+    $sub = Get-AzureRmSubscription
 
     Write-Output $sub
 
     foreach($s in $sub)
     {
-        if($s.Id -ne "0a938bc2-0bb8-4688-bd37-9964427fe0b0")
-        {
+
          Write-Output "Iterating through customer subscriptions..."
 Try
 {
-        Select-AzureRmSubscription -SubscriptionId $s.Id -TenantId b2a0bb8e-3f26-47f8-9040-209289b412a8
+        Select-AzureRmSubscription -SubscriptionId $s.Id
 }
 Catch
 {
@@ -39,9 +38,9 @@ Try
 
         New-AzureRmResourceGroupDeployment -Name mspAlert `
                                         -ResourceGroupName $vm.ResourceGroupName `
-                                        -TemplateUri 'https://raw.githubusercontent.com/krnese/managedServices/master/Templates/azureClassicAlert.json' `
+                                        -TemplateUri 'https://raw.githubusercontent.com/krnese/Olivia/master/Templates/azureClassicAlert.json' `
                                         -resourceId $vm.id `
-                                        -Verbose
+                                        -AsJob
 
         Write-Output "Done!"                                       
     }
@@ -58,5 +57,4 @@ Catch
 
     Write-Output "Job completed"
   
-  }
 }
