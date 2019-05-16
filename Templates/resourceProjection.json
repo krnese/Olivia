@@ -105,6 +105,10 @@
         "authorizations": {
             "type": "array",
             "value": "[parameters('authorizations')]"
+        },
+        "marketplace": {
+            "type": "object",
+            "value": "[if(equals(parameters('marketplaceOffer'), 'Yes'), variables('marketplacePlan'), json('{\"offer\": \"No marketplace offer\"}'))]"
         }
     }
 }
