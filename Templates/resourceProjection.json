@@ -26,52 +26,79 @@
                 "description": "Specify an array of objects, containing pairs of Azure Active Directory principalIds and corresponding Azure roleDefinitionId. The roleDefinition specified is granted to the principalId in the provider's Active Directory."
             }
         },
+        "marketplaceOffer": {
+            "type": "string",
+            "defaultValue": "Yes",
+            "metadata": {
+                "description": "Does this deployment include plan details that match an offer published in the Azure Marketplace?"
+            }
+        },
         "marketplacePublisherId": {
             "type": "string",
+            "defaultValue": "",
             "metadata": {
                 "description": "Must match the Azure Marketplace Publisher ID for the marketplace offer."
             }
         },
         "marketplaceOfferId": {
             "type": "string",
+            "defaultValue": "",
             "metadata": {
                 "description": "Must match the Azure Marketplace Offer ID for the marketplace offer."
             }
         },
         "marketplacePlanId": {
             "type": "string",
+            "defaultValue": "",
             "metadata": {
                 "description": "Must match the Azure Marketplace Plan ID for the plan within the marketplace offer."
             }
         },
         "marketplacePlanVersion": {
             "type": "string",
+            "defaultValue": "",
             "metadata": {
                 "description": "Must match the Azure Marketplace Plan version for the plan within the marketplace offer."
             }
         }
     },
     "variables": {
-        "mspRegistrationName": "[guid(parameters('mspName'))]",
+        "mspRegistrationName": "[if(equals(parameters('marketplaceOffer'), 'Yes'),guid(parameters('mspName'), 'Yes'), guid(parameters('mspName'), 'No'))]",
+        "mspRegistrationNameOfferYes": "[guid(parameters('mspName'), 'Yes')]",
+        "mspRegistrationNameOfferNo": "[guid(parameters('mspName'), 'No')]",
         "mspAssignmentName": "[guid(parameters('mspName'))]",
+        "marketplacePlan": {
+            "name": "[parameters('marketplacePlanId')]",
+            "product": "[parameters('marketplaceOfferId')]",
+            "publisher": "[parameters('marketplacePublisherId')]",
+            "version": "[parameters('marketplacePlanVersion')]"
+        }        
     },
     "resources": [
         {
+            "condition": "[equals(parameters('marketplaceOffer'), 'Yes')]",
             "type": "Microsoft.ManagedServices/registrationDefinitions",
             "apiVersion": "2018-06-01-preview",
-            "name": "[variables('mspRegistrationName')]",
+            "name": "[variables('mspRegistrationNameOfferYes')]",
             "properties": {
                 "registrationDefinitionName": "[parameters('mspName')]",
                 "description": "[parameters('mspOfferDescription')]",
                 "managedByTenantId": "[parameters('managedByTenantId')]",
                 "authorizations": "[parameters('authorizations')]"
             },
-            "plan": {
-                "name": "[parameters('marketplacePlanId')]",
-                "product": "[parameters('marketplaceOfferId')]",
-                "publisher": "[parameters('marketplacePublisherId')]",
-                "version": "[parameters('marketplacePlanVersion')]"
-            }
+            "plan": "[variables('marketplacePlan')]"
+        },
+        {
+            "condition": "[equals(parameters('marketplaceOffer'), 'No')]",
+            "type": "Microsoft.ManagedServices/registrationDefinitions",
+            "apiVersion": "2018-06-01-preview",
+            "name": "[variables('mspRegistrationNameOfferNo')]",
+            "properties": {
+                "registrationDefinitionName": "[parameters('mspName')]",
+                "description": "[parameters('mspOfferDescription')]",
+                "managedByTenantId": "[parameters('managedByTenantId')]",
+                "authorizations": "[parameters('authorizations')]"
+            },
         },
         {
             "type": "Microsoft.ManagedServices/registrationAssignments",
