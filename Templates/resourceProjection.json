@@ -63,9 +63,7 @@
         }
     },
     "variables": {
-        "mspRegistrationName": "[if(equals(parameters('marketplaceOffer'), 'Yes'),guid(parameters('mspName'), 'Yes'), guid(parameters('mspName'), 'No'))]",
-        "mspRegistrationNameOfferYes": "[guid(parameters('mspName'), 'Yes')]",
-        "mspRegistrationNameOfferNo": "[guid(parameters('mspName'), 'No')]",
+        "mspRegistrationName": "[guid(parameters('mspName'))]",
         "mspAssignmentName": "[guid(parameters('mspName'))]",
         "marketplacePlan": {
             "name": "[parameters('marketplacePlanId')]",
@@ -76,29 +74,16 @@
     },
     "resources": [
         {
-            "condition": "[equals(parameters('marketplaceOffer'), 'Yes')]",
             "type": "Microsoft.ManagedServices/registrationDefinitions",
             "apiVersion": "2018-06-01-preview",
-            "name": "[variables('mspRegistrationNameOfferYes')]",
+            "name": "[variables('mspRegistrationName')]",
             "properties": {
                 "registrationDefinitionName": "[parameters('mspName')]",
                 "description": "[parameters('mspOfferDescription')]",
                 "managedByTenantId": "[parameters('managedByTenantId')]",
                 "authorizations": "[parameters('authorizations')]"
             },
-            "plan": "[variables('marketplacePlan')]"
-        },
-        {
-            "condition": "[equals(parameters('marketplaceOffer'), 'No')]",
-            "type": "Microsoft.ManagedServices/registrationDefinitions",
-            "apiVersion": "2018-06-01-preview",
-            "name": "[variables('mspRegistrationNameOfferNo')]",
-            "properties": {
-                "registrationDefinitionName": "[parameters('mspName')]",
-                "description": "[parameters('mspOfferDescription')]",
-                "managedByTenantId": "[parameters('managedByTenantId')]",
-                "authorizations": "[parameters('authorizations')]"
-            },
+            "plan": "[if(equals(parameters('marketplaceOffer'), 'Yes'), variables('marketplacePlan'), json('null'))]"
         },
         {
             "type": "Microsoft.ManagedServices/registrationAssignments",
