@@ -5,41 +5,72 @@
         "mspName": {
             "type": "string",
             "metadata": {
-                "description": "Specify the Managed Service Provider name"
+                "description": "Provide a name for this registration definition. For example the name of the Managed Service Provider's offer"
             }
         },
         "mspOfferDescription": {
             "type": "string",
             "metadata": {
-                "description": "Name of the Managed Service Provider offering"
-            }
-        },
-        "publisherName": {
-            "type": "string",
-            "metadata": {
-                "description": "Specify the Azure Marketplace publisher name of the Managed Service Provider"
+                "description": "Provide a description for this registration definition. For example contact or contract details."
             }
         },
         "managedByTenantId": {
             "type": "string",
             "metadata": {
-                "description": "Specify the tenant id of the Managed Service Provider"
+                "description": "Specify the Azure Active Directory tenant id of the Managed Service Provider. Resources will be shared to this tenant."
             }
         },
         "authorizations": {
             "type": "array",
             "metadata": {
-                "description": "Specify the MSP principalId's to rolDefinitionId's mapping in an array of objects"
+                "description": "Specify an array of objects, containing pairs of Azure Active Directory principalIds and corresponding Azure roleDefinitionId. The roleDefinition specified is granted to the principalId in the provider's Active Directory."
             }
-        }              
+        },
+        "marketplaceOffer": {
+            "type": "string",
+            "defaultValue": "Yes",
+            "metadata": {
+                "description": "Does this deployment include plan details that match an offer published in the Azure Marketplace?"
+            }
+        },
+        "marketplacePublisherId": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Must match the Azure Marketplace Publisher ID for the marketplace offer."
+            }
+        },
+        "marketplaceOfferId": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Must match the Azure Marketplace Offer ID for the marketplace offer."
+            }
+        },
+        "marketplacePlanId": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Must match the Azure Marketplace Plan ID for the plan within the marketplace offer."
+            }
+        },
+        "marketplacePlanVersion": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Must match the Azure Marketplace Plan version for the plan within the marketplace offer."
+            }
+        }
     },
     "variables": {
         "mspRegistrationName": "[guid(parameters('mspName'))]",
         "mspAssignmentName": "[guid(parameters('mspName'))]",
-        "planName": "[parameters('mspName')]",
-        "product": "[concat('marketplace-test','|', parameters('mspName'),'|',variables('version'), '|', 'preview','|',variables('version'))]",
-        "publisher": "[parameters('publisherName')]",
-        "version": "1.0.0"
+        "marketplacePlan": {
+            "name": "[parameters('marketplacePlanId')]",
+            "product": "[parameters('marketplaceOfferId')]",
+            "publisher": "[parameters('marketplacePublisherId')]",
+            "version": "[parameters('marketplacePlanVersion')]"
+        }        
     },
     "resources": [
         {
@@ -52,12 +83,7 @@
                 "managedByTenantId": "[parameters('managedByTenantId')]",
                 "authorizations": "[parameters('authorizations')]"
             },
-            "plan": {
-                "name": "[variables('planName')]",
-                "product": "[variables('product')]",
-                "publisher": "[variables('publisher')]",
-                "version": "[variables('version')]"
-            }
+            "plan": "[if(equals(parameters('marketplaceOffer'), 'Yes'), variables('marketplacePlan'), json('null'))]"
         },
         {
             "type": "Microsoft.ManagedServices/registrationAssignments",
@@ -79,6 +105,10 @@
         "authorizations": {
             "type": "array",
             "value": "[parameters('authorizations')]"
+        },
+        "marketplace": {
+            "type": "object",
+            "value": "[if(equals(parameters('marketplaceOffer'), 'Yes'), variables('marketplacePlan'), json('{\"offer\": \"No marketplace offer\"}'))]"
         }
     }
 }

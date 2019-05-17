@@ -3,16 +3,13 @@
     "contentVersion": "1.0.0.0",
     "parameters": {
         "mspName": {
-            "value": "Fabrikam Managed Services - Interstellar"
+            "value": "Fabrikam Managed Services - Assessment"
         },
         "mspOfferDescription": {
-            "value": "Fabrikam Managed Services - Interstellar"
+            "value": "Template for demonstration purposes. Edit to contain your values. If marketplaceOffer = Yes, then values for marketplace parameters must match the offer details in the Cloud Partner Portal."
         },
         "managedByTenantId": {
             "value": "d6ad82f3-42af-4a15-ac1e-49e6c08f624e"
-        },
-            "publisherName": {
-            "value": "Fabrikam"
         },
         "authorizations": {
             "value": [
@@ -29,6 +26,21 @@
                     "roleDefinitionId": "36243c78-bf99-498c-9df9-86d9f8d28608"
                 }
             ]
-        }
+        },
+            "marketplaceOffer": {
+            "value": "No"
+        },
+            "marketplacePublisherId": {
+            "value": "marketplace-test"
+        },
+            "marketplaceOfferId": {
+            "value": "fabrikam-assessment"
+        },
+            "marketplacePlanId": {
+            "value": "assessment"
+        },
+            "marketplacePlanVersion": {
+            "value": "2.0.0"
+        }        
     }
 }
